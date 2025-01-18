@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delayed Audio Playback</title>
+</head>
+<body>
+  <h1>Real-time Audio with 10-second Delay</h1>
+  <p>Click the button below to start recording and playback with a 10-second delay.</p>
+  <button id="startButton">Start Recording</button>
+
+  <script>
+    const startButton = document.getElementById('startButton');
+    let mediaRecorder;
+    let audioContext;
+    let audioStream;
+    let audioChunks = [];
+
+    startButton.addEventListener('click', startRecording);
+
+    async function startRecording() {
+      try {
+        // Request permission to access the microphone
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Setup MediaRecorder for capturing the audio
+        mediaRecorder = new MediaRecorder(audioStream);
+
+        // Collect audio data in chunks
+        mediaRecorder.ondataavailable = event => {
+          audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          // When the recording stops, combine the chunks into a Blob
+          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audioElement = new Audio(audioUrl);
+          
+          // Play the recorded audio after a 10-second delay
+          setTimeout(() => {
+            audioElement.play();
+          }, 1000);  // 10 seconds delay
+        };
+
+        // Start recording
+        mediaRecorder.start();
+        console.log('Recording started...');
+
+        // Stop recording after 10 seconds
+        setTimeout(() => {
+          mediaRecorder.stop();
+          console.log('Recording stopped after 10 seconds');
+        }, 10000);
+
+      } catch (err) {
+        console.error('Error accessing microphone: ', err);
+      }
+    }
+  </script>
+</body>
+</html>
