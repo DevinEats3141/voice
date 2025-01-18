@@ -3,59 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Delayed Audio Playback</title>
+  <title>Continuous Audio Recording with 10-second Delay</title>
 </head>
 <body>
-  <h1>Real-time Audio with 10-second Delay</h1>
+  <h1>Continuous Audio with 10-second Delay Playback</h1>
   <p>Click the button below to start recording and playback with a 10-second delay.</p>
   <button id="startButton">Start Recording</button>
 
   <script>
     const startButton = document.getElementById('startButton');
-    let mediaRecorder;
     let audioContext;
     let audioStream;
+    let mediaRecorder;
     let audioChunks = [];
-
+    let audioBuffer;
+    let sourceNode;
+    let lastTimestamp = 0;
+    
     startButton.addEventListener('click', startRecording);
 
     async function startRecording() {
       try {
-        // Request permission to access the microphone
+        // Request permission to access microphone
         audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-        // Setup MediaRecorder for capturing the audio
+        
+        // Create a MediaRecorder to record audio continuously
         mediaRecorder = new MediaRecorder(audioStream);
-
-        // Collect audio data in chunks
         mediaRecorder.ondataavailable = event => {
           audioChunks.push(event.data);
-        };
-
-        mediaRecorder.onstop = async () => {
-          // When the recording stops, combine the chunks into a Blob
-          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-          const audioUrl = URL.createObjectURL(audioBlob);
-          const audioElement = new Audio(audioUrl);
-          
-          // Play the recorded audio after a 10-second delay
-          setTimeout(() => {
-            audioElement.play();
-          }, 1000);  // 10 seconds delay
         };
 
         // Start recording
         mediaRecorder.start();
         console.log('Recording started...');
 
-        // Stop recording after 10 seconds
-        setTimeout(() => {
-          mediaRecorder.stop();
-          console.log('Recording stopped after 10 seconds');
-        }, 10000);
+        // Playback the audio with a 10-second delay
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          
+          // Create a new Audio element to play back the recorded audio
+          const audioElement = new Audio(audioUrl);
+          setTimeout(() => {
+            audioElement.play(); // Play after 10-second delay
+          }, 10000);
+          
+          // Reset the chunks to start recording again
+          audioChunks = [];
+          mediaRecorder.start(); // Start recording again
+        };
 
+        // Continuously record and play back the sound with 10-second delay
+        setInterval(() => {
+          if (audioChunks.length > 0) {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audioElement = new Audio(audioUrl);
+            
+            setTimeout(() => {
+              audioElement.play();
+            }, 10000); // 10-second delay for playback
+            audioChunks = []; // Clear audio chunks after playback
+          }
+        }, 1000); // Check and play back every second
+        
       } catch (err) {
         console.error('Error accessing microphone: ', err);
       }
